@@ -140,7 +140,7 @@ public class Net {
                     java.util.ArrayList<String> ok = new java.util.ArrayList<String>();
                     for (String c : ((SSLSocket) s).getSupportedCipherSuites()) {
                         if (c.contains("SCSV") || c.contains("_anon_") || c.contains("NULL") || c.contains("EXPORT")
-                                || c.contains("_RC4_") || c.contains("_DES_") || c.contains("_MD5")) continue;
+                                || c.contains("_RC4_") || c.contains("_DES_") || c.contains("_3DES_") || c.contains("_MD5")) continue;
                         ok.add(c);
                     }
                     if (!ok.isEmpty()) ((SSLSocket) s).setEnabledCipherSuites(ok.toArray(new String[0]));
@@ -152,7 +152,7 @@ public class Net {
                 try {
                     String[] sup = ((SSLSocket) s).getSupportedProtocols();
                     java.util.ArrayList<String> want = new java.util.ArrayList<String>();
-                    for (String p : sup) if (p.equals("TLSv1.2") || p.equals("TLSv1.3") || p.equals("TLSv1.1")) want.add(p);
+                    for (String p : sup) if (p.equals("TLSv1.2") || p.equals("TLSv1.3")) want.add(p);
                     if (!want.isEmpty()) ((SSLSocket) s).setEnabledProtocols(want.toArray(new String[0]));
                 } catch (Throwable ignored) { }
             }

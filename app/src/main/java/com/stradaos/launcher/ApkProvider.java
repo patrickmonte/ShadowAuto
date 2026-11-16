@@ -15,9 +15,18 @@ public class ApkProvider extends ContentProvider {
     static String AUTH = "com.stradaos.launcher.apk";
     private static final HashMap<String, File> files = new HashMap<String, File>();
 
+    private static final java.security.SecureRandom RNG = new java.security.SecureRandom();
+
     static Uri share(File f) {
-        String token = Long.toHexString(System.nanoTime()) + ".apk";
-        synchronized (files) { files.put(token, f); }
+        byte[] b = new byte[12];
+        RNG.nextBytes(b);
+        StringBuilder sb = new StringBuilder(28);
+        for (byte x : b) sb.append(String.format(java.util.Locale.US, "%02x", x & 0xff));
+        String token = sb.append(".apk").toString();
+        synchronized (files) {
+            if (files.size() > 16) files.clear();
+            files.put(token, f);
+        }
         return Uri.parse("content://" + AUTH + "/" + token);
     }
 

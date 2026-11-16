@@ -6411,14 +6411,15 @@ public class Main extends Activity {
             try {
                 if (r.apkUrl == null || !r.apkUrl.startsWith(Updates.APK_PREFIX)) throw new Exception("origen no permitido");
                 byte[] data = Net.get(r.apkUrl, 60000);
-                File dir = getExternalFilesDir(null);
+                // Android 7+: guardar en almacenamiento interno privado (ApkProvider entrega por content://) para evitar TOCTOU en almacenamiento externo
+                File dir = SDK >= 24 ? new File(getFilesDir(), "updates") : getExternalFilesDir(null);
                 if (dir == null) dir = getFilesDir();
                 dir.mkdirs();
                 out = new File(dir, "StradaOS-" + r.version + ".apk");
                 java.io.FileOutputStream os = new java.io.FileOutputStream(out);
                 os.write(data);
                 os.close();
-                out.setReadable(true, false);
+                if (SDK < 24) out.setReadable(true, false);
                 if (!verifyApk(out)) {
                     Guard.log("Actualización rechazada: el APK descargado no es StradaOS firmado con la misma llave.");
                     out.delete();
@@ -6997,9 +6998,19 @@ public class Main extends Activity {
                 "com.opera.browser", PKG_WEB}) {
             if (launchPkg(p)) return;
         }
-        File apk = findApkOnUsb("firefox", "navegador", "browser", "opera");
+        final File apk = findApkOnUsb("firefox", "navegador", "browser", "opera");
         if (apk != null && compatible(apk)) {
-            installFile(apk, "el navegador");
+            android.content.pm.PackageInfo pi = null;
+            try { pi = getPackageManager().getPackageArchiveInfo(apk.getAbsolutePath(), 0); } catch (Throwable ignored) { }
+            String pkgInfo = pi != null ? "\nPaquete: " + pi.packageName : "";
+            new TB(this, dlg())
+                .setTitle("Instalar navegador")
+                .setMessage("Se encontró «" + apk.getName() + "» en:\n" + apk.getAbsolutePath() + pkgInfo + "\n\n¿Quieres abrir el instalador?")
+                .setPositiveButton("Instalar", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface d, int w) { installFile(apk, "el navegador"); }
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
             return;
         }
         if (apk != null) toast("«" + apk.getName() + "» necesita un Android más nuevo que el de esta pantalla. Abro el navegador de fábrica.");
@@ -7089,9 +7100,9 @@ public class Main extends Activity {
             PackageManager pm = getPackageManager();
             android.content.pm.PackageInfo a = pm.getPackageArchiveInfo(f.getAbsolutePath(), PackageManager.GET_SIGNATURES);
             if (a == null || !getPackageName().equals(a.packageName)) return false;
-            if (a.signatures == null || a.signatures.length == 0) return true;
+            if (a.signatures == null || a.signatures.length == 0) return false;
             android.content.pm.PackageInfo me = pm.getPackageInfo(getPackageName(), PackageManager.GET_SIGNATURES);
-            if (me.signatures == null || me.signatures.length == 0) return true;
+            if (me.signatures == null || me.signatures.length == 0) return false;
             java.util.HashSet<String> mine = new java.util.HashSet<String>();
             for (android.content.pm.Signature sg : me.signatures) mine.add(sg.toCharsString());
             java.util.HashSet<String> theirs = new java.util.HashSet<String>();
